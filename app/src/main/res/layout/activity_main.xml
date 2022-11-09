@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    android:layout_marginHorizontal="20dp"
+    android:orientation="vertical"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+
+
+    tools:context="com.example.app1.stickerprinter.MainActivity"
+    android:backgroundTint="#4052b5">
+
+    <TextView
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="قم بتحديد نوع الطابعة"
+        android:textSize="30sp"
+        android:textAlignment="center"
+        android:gravity="center_horizontal" />
+
+
+        <RadioGroup
+            android:id="@+id/radio_grp"
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <RadioButton
+                android:checked="true"
+                android:id="@+id/tsc_radio_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="TSC Printer"
+                />
+            <RadioButton
+                android:id="@+id/honey_radio_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Honeywell Printer"
+                />
+
+
+
+        </RadioGroup>
+
+<!--    <Button-->
+<!--        android:id="@+id/btn_zebra"-->
+<!--        android:layout_width="wrap_content"-->
+<!--        android:layout_height="wrap_content"-->
+<!--        android:text="Zebra Printer" />-->
+
+    <Button
+        android:id="@+id/btn_test"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Zebra Printer" />
+
+    <include
+        android:id="@+id/tsc_include"
+        layout="@layout/tsc_layout"
+        />
+    <include
+        android:id="@+id/honey_include"
+        layout="@layout/honey_layout"
+        />
+
+
+
+</LinearLayout>
