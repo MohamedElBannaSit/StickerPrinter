@@ -1599,7 +1599,6 @@ id SHOW_PROGRESS
 id SYM
 id TOP_END
 id TOP_START
-id about
 id accelerate
 id accessibility_action_clickable_span
 id accessibility_custom_action_0
@@ -1672,10 +1671,8 @@ id baseline
 id beginOnFirstDraw
 id beginning
 id blocking
-id bluetoothRadio
 id bottom
 id bounce
-id btn_test
 id buttonPanel
 id cancel_button
 id center
@@ -1721,8 +1718,8 @@ id direct
 id disableHome
 id disablePostScroll
 id disableScroll
-id disconnectPrinter
-id discoverPrinters
+id discoveredPrintersEmptyView
+id discoveredPrintersListView
 id dragDown
 id dragEnd
 id dragLeft
@@ -1773,8 +1770,6 @@ id image
 id info
 id invisible
 id ipAddressInput
-id ipAddressText
-id ipDnsRadio
 id italic
 id item_touch_helper_previous_elevation
 id jumpToEnd
@@ -1788,8 +1783,6 @@ id line3
 id linear
 id listMode
 id list_item
-id macAddressText
-id macInput
 id masked
 id message
 id middle
@@ -1847,14 +1840,13 @@ id peekHeight
 id percent
 id pin
 id portInput
-id portText
 id position
 id postLayout
 id printBarcodeButton
+id printerName
 id progress_circular
 id progress_horizontal
 id radio
-id radioGroup
 id radio_grp
 id ratio
 id rectangles
@@ -1882,12 +1874,12 @@ id search_edit_frame
 id search_go_btn
 id search_mag_icon
 id search_plate
+id search_printer
 id search_src_text
 id search_voice_btn
 id select_dialog_listview
 id selected
 id setPrinterId
-id settings
 id shortcut
 id showCustom
 id showHome
@@ -1983,6 +1975,8 @@ id withText
 id withinBounds
 id wrap
 id wrap_content
+id zebra_include
+id zebra_radio_id
 id zero_corner_chip
 integer abc_config_activityDefaultDur
 integer abc_config_activityShortDur
@@ -2062,7 +2056,9 @@ layout design_navigation_menu
 layout design_navigation_menu_item
 layout design_text_input_end_icon
 layout design_text_input_start_icon
+layout dialog_printer_connect
 layout honey_layout
+layout list_item_discovered_printer
 layout mtrl_alert_dialog
 layout mtrl_alert_dialog_actions
 layout mtrl_alert_dialog_title
@@ -2157,6 +2153,7 @@ string chip_text
 string clear_text_end_icon_content_description
 string disconnect_printer
 string discover_printers
+string discovered_printers
 string error_icon_content_description
 string exposed_dropdown_menu_content_description
 string fab_transformation_scrim_behavior
@@ -2207,6 +2204,7 @@ string path_password_eye_mask_strike_through
 string path_password_eye_mask_visible
 string path_password_strike_through
 string search_menu_title
+string searching_for_printers
 string settings
 string status_bar_notification_info_overflow
 style AlertDialog_AppCompat

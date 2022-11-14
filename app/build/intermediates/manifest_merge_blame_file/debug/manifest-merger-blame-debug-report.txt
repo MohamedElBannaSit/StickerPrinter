@@ -87,7 +87,7 @@
 40        android:allowBackup="true"
 40-->/Users/elbanna/Desktop/Desktop/SIT/mobileapp/الشحن/الاستقبال/StickerPrinter/app/src/main/AndroidManifest.xml:36:9-35
 41        android:appComponentFactory="androidx.core.app.CoreComponentFactory"
-41-->[androidx.core:core:1.3.1] /Users/elbanna/.gradle/caches/transforms-2/files-2.1/aed2d48291dbe4779678b4bb5ca34b78/core-1.3.1/AndroidManifest.xml:24:18-86
+41-->[androidx.core:core:1.3.1] /Users/elbanna/.gradle/caches/transforms-2/files-2.1/fe05db651979b39875ef014855ff51f0/core-1.3.1/AndroidManifest.xml:24:18-86
 42        android:debuggable="true"
 43        android:icon="@mipmap/ic_launcher"
 43-->/Users/elbanna/Desktop/Desktop/SIT/mobileapp/الشحن/الاستقبال/StickerPrinter/app/src/main/AndroidManifest.xml:37:9-43
