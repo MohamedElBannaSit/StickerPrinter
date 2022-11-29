@@ -49,7 +49,11 @@ public class PrinterConnectionDialog extends DialogFragment {
         final AlertDialog dialog = builder.create();
 
         discoveredPrintersListView.setOnItemClickListener((parent, view1, position, id) -> {
-            mainActivity.setPrinterIP(discoveredPrinters.get(position));
+            try {
+                mainActivity.setPrinterIP(discoveredPrinters.get(position));
+            } catch (Exception e) {
+                Log.e(TAG, e.getMessage());
+            }
             dialog.dismiss();
         });
 
@@ -57,8 +61,14 @@ public class PrinterConnectionDialog extends DialogFragment {
             NetworkDiscoverer.findPrinters(new DiscoveryHandler() {
                 @Override
                 public void foundPrinter(DiscoveredPrinter discoveredPrinter) {
-                    discoveredPrinters.add(discoveredPrinter);
-                    adapter.notifyDataSetChanged();
+
+                    try {
+                        discoveredPrinters.add(discoveredPrinter);
+                        adapter.notifyDataSetChanged();
+                    } catch (Exception e) {
+                        Log.e(TAG, e.getMessage());
+                    }
+
                     Log.i(TAG, "Discovered a printer");
                 }
 

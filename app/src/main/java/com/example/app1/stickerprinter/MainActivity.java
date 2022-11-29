@@ -6,6 +6,7 @@ import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.wifi.WifiInfo;
 import android.net.wifi.WifiManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
@@ -19,12 +20,10 @@ import android.widget.ImageButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.app1.stickerprinter.zebra.DemoSleeper;
-import com.example.app1.stickerprinter.zebra.ZebraActivity;
 import com.example.app1.stickerprinter.zebra.chooseprinter.PrinterConnectionDialog;
 import com.example.tscdll.TscWifiActivity;
 import com.honeywell.printer.PrinterSdk;
@@ -47,13 +46,12 @@ import java.util.Map;
 
 
 public class MainActivity extends AppCompatActivity {
+    static final int MSG_PRINTING = 11115;
+    static final int MSG_PRINT_END = 11116;
+    static final int MSG_FINDING = 11111;
+    static final int MSG_FIND_END = 11112;
+    static final int MSG_LOCAL_IP = 11113;
     private static final String TAG = "MainActivity";
-    private TextView _curDevIp;
-    private Button _buttonFindPrinter;
-    private Button _buttonPrintBarcode;
-    private Button _buttonSetPrinter, backBtn;
-
-    private Spinner _spinner;
     Map<String, String> _mapPrinterIpName = new HashMap<>();
 
     int _iLeftEdge = 50;
@@ -69,8 +67,7 @@ public class MainActivity extends AppCompatActivity {
     String shipCode;
     String toStoreName;
     String toStorePhone;
-    String shipmentShip_code;
-    String shipmentStore_name;
+
     String shipmentFrom_name;
     String shipmentFrom_phone;
     String shipmentTo_name;
@@ -81,19 +78,21 @@ public class MainActivity extends AppCompatActivity {
     View tscView, honeyView, zebraView;
     Button tscPrintBtn, tscBackBtn;
     EditText tscIp;
-
+    PrinterConnectionDialog mPrinterConnectionDialog;
+    Bundle shipDataBundle;
+    //refresh UI
+    MyHandler _handler = new MyHandler(this);
+    private TextView _curDevIp;
+    private Button _buttonFindPrinter;
+    private Button _buttonPrintBarcode;
+    private Button _buttonSetPrinter, backBtn;
+    private Spinner _spinner;
     private Connection connection;
     private ZebraPrinter printer;
-
     private EditText ipAddressEditText;
     private EditText portNumberEditText;
-
     private Button testButton;
     private TextView statusField;
-
-    PrinterConnectionDialog mPrinterConnectionDialog;
-
-    Bundle shipDataBundle;
 
     public static String bundleToString(Bundle bundle) {
         if (bundle == null) {
@@ -112,8 +111,8 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        _curDevIp = (TextView) findViewById(R.id.textView);
-        rdGrp = (RadioGroup) findViewById(R.id.radio_grp);
+        _curDevIp = findViewById(R.id.textView);
+        rdGrp = findViewById(R.id.radio_grp);
         tscView = findViewById(R.id.tsc_include);
         honeyView = findViewById(R.id.honey_include);
         zebraView = findViewById(R.id.zebra_include);
@@ -121,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
 //        btnTestPrinter = findViewById(R.id.btn_test);
 
 
+        tscView.setVisibility(View.GONE);
         honeyView.setVisibility(View.GONE);
 
 
@@ -132,10 +132,12 @@ public class MainActivity extends AppCompatActivity {
                     System.out.println("TSC Selected");
                     tscView.setVisibility(View.VISIBLE);
                     honeyView.setVisibility(View.GONE);
+                    zebraView.setVisibility(View.GONE);
                     break;
                 case R.id.honey_radio_id:
                     System.out.println("Honey Selected");
                     tscView.setVisibility(View.GONE);
+                    zebraView.setVisibility(View.GONE);
                     honeyView.setVisibility(View.VISIBLE);
                     break;
                 case R.id.zebra_radio_id:
@@ -152,21 +154,19 @@ public class MainActivity extends AppCompatActivity {
         shipDataBundle = i.getBundleExtra("ship_data");
 
         if (shipDataBundle != null) {
-            Log.e("Bundle", bundleToString(shipDataBundle));
 
 
             qty = shipDataBundle.getStringArrayList("qty");
             shipCode = shipDataBundle.getString("ship_code");
             toStoreName = shipDataBundle.getString("store_name");
             toStorePhone = shipDataBundle.getString("store_phone");
-
-
             shipmentFrom_name = shipDataBundle.getString("from_name");
             shipmentFrom_phone = shipDataBundle.getString("from_phone");
             shipmentTo_name = shipDataBundle.getString("to_name");
-            shipDataBundle.getString("to_phone");
+            shipmentTo_phone = shipDataBundle.getString("to_phone");
             shipmentTotal = shipDataBundle.getString("total");
 
+            Log.e("Bundle", bundleToString(shipDataBundle));
         }
 
         try {
@@ -202,28 +202,26 @@ public class MainActivity extends AppCompatActivity {
     private void setupZebraPrinter() {
         mPrinterConnectionDialog = new PrinterConnectionDialog();
 
-        ipAddressEditText = (EditText) this.findViewById(R.id.ipAddressInput);
+        ipAddressEditText = this.findViewById(R.id.ipAddressInput);
         ipAddressEditText.setText("192.168.5.194");
 
-        portNumberEditText = (EditText) this.findViewById(R.id.portInput);
+        portNumberEditText = this.findViewById(R.id.portInput);
         portNumberEditText.setText("9100");
 
 
-        statusField = (TextView) this.findViewById(R.id.statusText);
+        statusField = this.findViewById(R.id.statusText);
 
 
-        testButton = (Button) this.findViewById(R.id.testButton);
+        testButton = this.findViewById(R.id.testButton);
         testButton.setOnClickListener(v -> new Thread(() -> {
             enableTestButton(false);
             if (shipDataBundle != null)
                 doConnectionTest();
         }).start());
 
-        ImageButton findPrinterButton = (ImageButton) this.findViewById(R.id.search_printer);
+        ImageButton findPrinterButton = this.findViewById(R.id.search_printer);
         findPrinterButton.setOnClickListener(view ->
-        {
-            mPrinterConnectionDialog.show(getFragmentManager(), TAG);
-        });
+                mPrinterConnectionDialog.show(getFragmentManager(), TAG));
     }
 
     public ZebraPrinter connect() {
@@ -331,100 +329,40 @@ public class MainActivity extends AppCompatActivity {
     private void doConnectionTest() {
         printer = connect();
         if (printer != null) {
-            for (int i = 0; i < qty.size(); i++) {
-                int productQty = Integer.parseInt(qty.get(i));
-                for (int j = 0; j < productQty; j++) {
-                    sendTestLabel(("^XA~TA000~JSN^LT0^MNW^MTT^PON^PMN^LH0,0^JMA^PR5,5~SD15^JUS^LRN^CI0^XZ\n" +
-                            "~DG000.GRF,05376,028,\n" +
-                            ",::::::::::::::::::::::::::::gH0H1H510,gG08AJAH80,Y0H5M754,Y0RA0,V015DSD,W0UA80,U017H757R74,U02ALAI02ALA,T05FDJD510H0H15DIDFD0,T0KA80O0KA8,S057I740P017J740,S0JA80S02AHA80,Q015DIDU01DID0,R0JAW02AHA8,Q057H740W0J7,Q0JAg0IA80,P05FDD50J0I15151510J015DFD0,P0IA80gG0IA8,O017H740J0S4J05774,O02AHAgJ0IA,N015DD0J0O151515150H015FDC0,O0IAgL0IA0,N0I740I040404S4I017H70,N02AA0gL02AA8,M01DFD0H0O151515M5I01FDC,M02AA80gM0IA,M0I7K0W454540H057740,M0IAgP0HA80,L01DDC001S151515L5H017DD0,L02AA80gO02AA0,L0H750H0404040404W4H01574,L0HA80gQ0HA8,K01DD1001O151515R5H017DD,K02AA0gR02AA,K0H740H0404X4545454400177,K0HA80gS0HA80,J01DDC01T151515P5H017DC0,K0HAgU02AA0,J0H570H0404H404gI4H05770,J02A80gU0HA0,J05DC01P1515151515R5H01FDC,J0HA80gU0HA8,I01770H0gG45454545454400774,J0HAgW02AA,I05FD001S15151515R5H01DD,I02A80gW0HA,I0H74004gS4H0H7,I02A80gW02A80,H01FD001151H1515151010L01015P5H05FC0,I0HAgY02A80,H0177004N4W0454545454001740,H02AA0gY0HA0,H05DC01M1g0H1L5401DD0,H02A80N080gO0HA0,H0H74004K47F40Y0M4H0H70,H02A80M0IAgO02A8,01DF001515155FD7D010W015J5H05DC,H0HAM02AA82AA0gL02A8,0177004J47F7C7FF540V0H5454540574,H0HAM0HA2AHA2AA0U02AA0K02A8,01DD015151FFD1FHF1FFD10Q015FDHDI5H01DD,H0A80K0A8A2A8AKA80P02AJA80J0HA,0174004457F077F477F5F7F40P057I7J40175,02A80I02AA0AHA8AHA8AJAR02AHAK0HA,07DC01557C7DFD7DFF7FHF7FFD10N0H15DHDH501DD,02A80H0HA82AA82AHA2AHA2AIA80Q0HAJ0HA,077404575C7F7C7FHF7FHF7F7F7540P057540077,02A8002A0A2A0AHA8AHA8AMAR02A0H02A,05F8015D1FHF1FHF1FHFDFHFDFHFIDP0155015D,02A800820A8A0AWA80P08002A80,077007075F477FC7F7C7F7F7N740O01007740,02A00202AA82AA82AHA2AHA2AHA2AKAR02A80,1FD00117D5D7F5DFF7FTFHDQ05DC0,0AA8008A80AHA2AHA2AWAP02A80,075001F5C1FDF57FF57F7H7F757F7M750N0H740,0AA0H0A0A2A8AHA8AgGAN02A80,1DD001F17FF1FHF9FHFDFHFDFHFDFDFDMDM05DC0,0AA0H020AHA8AHA8AgHA80K02A80,0770H0157C75F477F7U757K740J07540,0AA0I02A82AHA2AHA2AHA2AHA2ASAK02A80,1FD0I0H1D7F5F7FDFHFDFHFDFHFDFHFDFFDDFDFDD0I05FC0,0AA0K0IA0AHA8AHA8AHA8AHA8ARA80H02A80,0770K057F1F7F5F775F7757H757R750H0H740,0AA0M02AgPA8002A80,1DD0M05FFC7FFD7FHF5FDF5DDF5FDFDFDFDJDH05DC0,0AA80M02A8AgNAH02A80,0770O057L757H757H757H757N75007540,0AA0P02AA2AHA2AgGAH02A80,15D0P015FKFDFLFIDFDFDFDFDIDH05DC0,02A80R0HA8AgIAH02A80,07740R057D7H757H757T740077,02A80T0gJAI02A80,05D80150Q015D5DFD5DUD5015D,02A80V0gGA80H0HA,077400450S05757H7H5Q75440077,02A80I080S02AVA80I0HA,01DC01H150S015FDFDHDFDFDFDHDFD5H501DD,02A80J0A0U0TA80J0HA,0174004H4740T057Q7H54540174,H0HAL0A80U02AOA80K0HA,01DD01J15D50T015DIDFDIDJ5H01FC,H0HAM0HA80U0NA80K02A8,H0H7H0K4577540T05757H754J4H0H74,H0HAN02AA80U02AIAN02A8,H05FC0151H1H5FD0V015DFD5K5017D8,H02A80M0280X02A0N0HA8,H0H74004K450Y014H45454401770,H02AA0gY0HA0,H01DD001N1W0H1M5H01DD0,I0HAgY02AA0,H01770H0O4U0P4H0H740,I0HAgY02A80,H015DC0115151515151H101010101515P5015FC0,I02A80gW0HA80,I0H74004gM45454540177,I02AA0gV02AA,I01DD00115151515151515151515H515N5H05DD,J0HA80gU02A8,J0H74004gQ4H0H74,J02A80gU0HA0,J05DD001151515H515H515V5H01FD0,J02AA0gT02AA0,J01774004gG454545454007740,K0HA80gS0HA80,K05DD0011515151515151515R5H01DD,K02AA0gR02AA,K01770H0gN4H0H74,L0HA80gQ0HA8,K015FD0015gK5H01FDC,L02AA0gP02AA8,L05774004S4545454545440H0H750,M0HA80gO0HA80,M05DD0015515H515U5I05DDC0,M02AA80gM02AA,M017740H0gH4H01774,N0IAgM02AA8,N05FD40015Y5H015FD0,N02AHAgL0IA0,N017H7J0H454H45454545454540H0I740,O02AA80gI0IA,O01DHDJ015S5I015DHD,P0IA80gG0IA8,P057750J0R4J057570,Q0IA80Y0IA80,P015DHDK0H1L510H0H15FDF,Q02AHA80W0JA,R0J740T017I74,R02AIAU02AIA0,R015DIDR015DDFD40,T0KAR0KA,T0K7540L0157J74,U0MAK02AKA80,T015DFDFDLDFDFDFDD,V02AUA8,W0U740,X02AQA0,X015DOD50,gG0MA80,gH0K50,,:::^XA\n" +
-                            "^MMT\n" +
-                            "^PW759\n" +
-                            "^LL0999\n" +
-                            "^LS0\n" +
-                            "^FT544,192^XG000.GRF,1,1^FS\n" +
-                            "^FO14,13^GB733,962,2^FS\n" +
-                            "^FO14,211^GB733,0,4^FS\n" +
-                            "^FO14,394^GB733,0,4^FS\n" +
-                            "^FO501,13^GB0,197,4^FS\n" +
-                            "^FT180,451^A0N,54,103^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD" + shipmentFrom_name + "^FS\n" +
-                            "^FT190,511^A0N,39,120^FH\\^A@N,0,42,E:TT0003M_.TTF^CI28^FD" + shipmentFrom_phone + "^FS\n" +
-                            "^FO14,596^GB733,0,4^FS\n" +
-                            "^FT221,777^A0N,34,146^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD" + shipmentTo_name + "^FS\n" +
-                            "^FT198,722^A0N,39,91^FH\\^A@N,0,42,E:TT0003M_.TTF^CI28^FD" + shipmentTo_phone + "^FS\n" +
-                            "^FO19,818^GB728,0,4^FS\n" +
-                            "^BY2,3,127^FT81,949^B3N,N,,Y,N\n" +
-                            "^FD" + shipmentShip_code + "^FS\n" +
-                            "^BY2,3,152^FT67,371^B3N,N,,Y,N\n" +
-                            "^FD" + shipmentShip_code + "^FS\n" +
-                            "^FT31,123^A0N,44,216^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD" + shipmentStore_name + "^FS\n" +
-                            "^FT25,64^A0N,44,43^FH\\^FDContact Us^FS\n" +
-                            "^FT31,198^A0N,56,55^FH\\^FD" + shipmentTo_phone + "^FS\n" +
-                            "^PQ" + productQty + ",0,1,Y^XZ\n" +
-                            "^XA^ID000.GRF^FS^XZ\n").getBytes());
-
-//                    "^XA\n" +
-//                            "^MMT\n" +
-//                            "^PW759\n" +
-//                            "^LL0999\n" +
-//                            "^LS0\n" +
-//                            "^FT544,192^XG000.GRF,1,1^FS\n" +
-//                            "^FO14,13^GB733,962,2^FS\n" +
-//                            "^FO14,211^GB733,0,4^FS\n" +
-//                            "^FO14,394^GB733,0,4^FS\n" +
-//                            "^FO501,13^GB0,197,4^FS\n" +
-//                            "^FT180,451^A0N,54,103^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD??? ?????? ???????^FS\n" +
-//                            "^FT190,511^A0N,39,120^FH\\^A@N,0,35,E:TT0003M_.TTF^CI28^FD??? ???? ??????^FS\n" +
-//                            "^FT190,559^A0N,39,153^FH\\^FD????? ??????^FS\n" +
-//                            "^FO14,596^GB733,0,4^FS\n" +
-//                            "^FT221,777^A0N,34,146^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD????? ??????^FS\n" +
-//                            "^FT198,722^A0N,39,91^FH\\^A@N,0,35,E:TT0003M_.TTF^CI28^FD??? ???? ?????? ????^FS\n" +
-//                            "^FT186,651^A0N,54,81^FH\\^FD??? ?????? ???? ???????^FS\n" +
-//                            "^FO19,818^GB728,0,4^FS\n" +
-//                            "^BY2,3,127^FT81,949^B3N,N,,Y,N\n" +
-//                            "^FDDMM-RYD-56789012^FS\n" +
-//                            "^BY2,3,152^FT67,371^B3N,N,,Y,N\n" +
-//                            "^FDDMM-RYD-456789012^FS\n" +
-//                            "^FT31,123^A0N,44,216^FH\\^FDJED^FS\n" +
-//                            "^FT25,64^A0N,44,43^FH\\^FDContact us^FS\n" +
-//                            "^FT31,198^A0N,56,55^FH\\^FD05012345678^FS\n" +
-//                            "^PQ1,0,1,Y^XZ\n" +
-//                            "^XA^ID000.GRF^FS^XZ"
-
-//                    "^XA\n" +
-//                            "^MMT\n" +
-//                            "^PW759\n" +
-//                            "^LL0999\n" +
-//                            "^LS0\n" +
-//                            "^FT480,224^XG000.GRF,1,1^FS\n" +
-//                            "^FO14,13^GB733,962,2^FS\n" +
-//                            "^FO14,211^GB733,0,4^FS\n" +
-//                            "^FO476,13^GB0,197,4^FS\n" +
-//                            "^FO14,386^GB733,0,4^FS\n" +
-//                            "^FO353,215^GB0,171,4^FS\n" +
-//                            "^FT252,470^A0N,72,91^FH\\^FD??? ?????? ???????^FS\n" +
-//                            "^FT393,515^A0N,43,79^FH\\^FD??? ???? ??????^FS\n" +
-//                            "^FT537,583^A0N,56,55^FH\\^FD????? ??????^FS\n" +
-//                            "^FO14,596^GB733,0,4^FS\n" +
-//                            "^FT462,791^A0N,41,79^FH\\^FD????? ??????^FS\n" +
-//                            "^FT278,730^A0N,43,79^FH\\^FD??? ???? ?????? ????^FS\n" +
-//                            "^FT117,670^A0N,72,91^FH\\^FD??? ?????? ???? ???????^FS\n" +
-//                            "^FO19,818^GB728,0,4^FS\n" +
-//                            "^BY3,3,82^FT38,931^B3N,N,,Y,N\n" +
-//                            "^FD123456789012^FS\n" +
-//                            "^BY2,3,152^FT16,173^B3N,N,,Y,N\n" +
-//                            "^FD123456789012^FS\n" +
-//                            "^FT438,268^A0N,65,55^FH\\^FDDestination^FS\n" +
-//                            "^FT462,386^A0N,106,105^FH\\^FDJED^FS\n" +
-//                            "^FT81,259^A0N,44,43^FH\\^FDContact us^FS\n" +
-//                            "^FT38,350^A0N,56,55^FH\\^FD05012345678^FS\n" +
-//                            "^PQ1,0,1,Y^XZ\n" +
-//                            "^XA^ID000.GRF^FS^XZ"
-
-
-                }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                shipDataBundle.getIntegerArrayList("qty").forEach(s -> {
+                    int productQty = s;
+                    for (int j = 0; j < productQty; j++) {
+                        sendTestLabel(("^XA~TA000~JSN^LT0^MNW^MTT^PON^PMN^LH0,0^JMA^PR5,5~SD15^JUS^LRN^CI0^XZ\n" +
+                                "~DG000.GRF,05376,028,\n" +
+                                ",::::::::::::::::::::::::::::gH0H1H510,gG08AJAH80,Y0H5M754,Y0RA0,V015DSD,W0UA80,U017H757R74,U02ALAI02ALA,T05FDJD510H0H15DIDFD0,T0KA80O0KA8,S057I740P017J740,S0JA80S02AHA80,Q015DIDU01DID0,R0JAW02AHA8,Q057H740W0J7,Q0JAg0IA80,P05FDD50J0I15151510J015DFD0,P0IA80gG0IA8,O017H740J0S4J05774,O02AHAgJ0IA,N015DD0J0O151515150H015FDC0,O0IAgL0IA0,N0I740I040404S4I017H70,N02AA0gL02AA8,M01DFD0H0O151515M5I01FDC,M02AA80gM0IA,M0I7K0W454540H057740,M0IAgP0HA80,L01DDC001S151515L5H017DD0,L02AA80gO02AA0,L0H750H0404040404W4H01574,L0HA80gQ0HA8,K01DD1001O151515R5H017DD,K02AA0gR02AA,K0H740H0404X4545454400177,K0HA80gS0HA80,J01DDC01T151515P5H017DC0,K0HAgU02AA0,J0H570H0404H404gI4H05770,J02A80gU0HA0,J05DC01P1515151515R5H01FDC,J0HA80gU0HA8,I01770H0gG45454545454400774,J0HAgW02AA,I05FD001S15151515R5H01DD,I02A80gW0HA,I0H74004gS4H0H7,I02A80gW02A80,H01FD001151H1515151010L01015P5H05FC0,I0HAgY02A80,H0177004N4W0454545454001740,H02AA0gY0HA0,H05DC01M1g0H1L5401DD0,H02A80N080gO0HA0,H0H74004K47F40Y0M4H0H70,H02A80M0IAgO02A8,01DF001515155FD7D010W015J5H05DC,H0HAM02AA82AA0gL02A8,0177004J47F7C7FF540V0H5454540574,H0HAM0HA2AHA2AA0U02AA0K02A8,01DD015151FFD1FHF1FFD10Q015FDHDI5H01DD,H0A80K0A8A2A8AKA80P02AJA80J0HA,0174004457F077F477F5F7F40P057I7J40175,02A80I02AA0AHA8AHA8AJAR02AHAK0HA,07DC01557C7DFD7DFF7FHF7FFD10N0H15DHDH501DD,02A80H0HA82AA82AHA2AHA2AIA80Q0HAJ0HA,077404575C7F7C7FHF7FHF7F7F7540P057540077,02A8002A0A2A0AHA8AHA8AMAR02A0H02A,05F8015D1FHF1FHF1FHFDFHFDFHFIDP0155015D,02A800820A8A0AWA80P08002A80,077007075F477FC7F7C7F7F7N740O01007740,02A00202AA82AA82AHA2AHA2AHA2AKAR02A80,1FD00117D5D7F5DFF7FTFHDQ05DC0,0AA8008A80AHA2AHA2AWAP02A80,075001F5C1FDF57FF57F7H7F757F7M750N0H740,0AA0H0A0A2A8AHA8AgGAN02A80,1DD001F17FF1FHF9FHFDFHFDFHFDFDFDMDM05DC0,0AA0H020AHA8AHA8AgHA80K02A80,0770H0157C75F477F7U757K740J07540,0AA0I02A82AHA2AHA2AHA2AHA2ASAK02A80,1FD0I0H1D7F5F7FDFHFDFHFDFHFDFHFDFFDDFDFDD0I05FC0,0AA0K0IA0AHA8AHA8AHA8AHA8ARA80H02A80,0770K057F1F7F5F775F7757H757R750H0H740,0AA0M02AgPA8002A80,1DD0M05FFC7FFD7FHF5FDF5DDF5FDFDFDFDJDH05DC0,0AA80M02A8AgNAH02A80,0770O057L757H757H757H757N75007540,0AA0P02AA2AHA2AgGAH02A80,15D0P015FKFDFLFIDFDFDFDFDIDH05DC0,02A80R0HA8AgIAH02A80,07740R057D7H757H757T740077,02A80T0gJAI02A80,05D80150Q015D5DFD5DUD5015D,02A80V0gGA80H0HA,077400450S05757H7H5Q75440077,02A80I080S02AVA80I0HA,01DC01H150S015FDFDHDFDFDFDHDFD5H501DD,02A80J0A0U0TA80J0HA,0174004H4740T057Q7H54540174,H0HAL0A80U02AOA80K0HA,01DD01J15D50T015DIDFDIDJ5H01FC,H0HAM0HA80U0NA80K02A8,H0H7H0K4577540T05757H754J4H0H74,H0HAN02AA80U02AIAN02A8,H05FC0151H1H5FD0V015DFD5K5017D8,H02A80M0280X02A0N0HA8,H0H74004K450Y014H45454401770,H02AA0gY0HA0,H01DD001N1W0H1M5H01DD0,I0HAgY02AA0,H01770H0O4U0P4H0H740,I0HAgY02A80,H015DC0115151515151H101010101515P5015FC0,I02A80gW0HA80,I0H74004gM45454540177,I02AA0gV02AA,I01DD00115151515151515151515H515N5H05DD,J0HA80gU02A8,J0H74004gQ4H0H74,J02A80gU0HA0,J05DD001151515H515H515V5H01FD0,J02AA0gT02AA0,J01774004gG454545454007740,K0HA80gS0HA80,K05DD0011515151515151515R5H01DD,K02AA0gR02AA,K01770H0gN4H0H74,L0HA80gQ0HA8,K015FD0015gK5H01FDC,L02AA0gP02AA8,L05774004S4545454545440H0H750,M0HA80gO0HA80,M05DD0015515H515U5I05DDC0,M02AA80gM02AA,M017740H0gH4H01774,N0IAgM02AA8,N05FD40015Y5H015FD0,N02AHAgL0IA0,N017H7J0H454H45454545454540H0I740,O02AA80gI0IA,O01DHDJ015S5I015DHD,P0IA80gG0IA8,P057750J0R4J057570,Q0IA80Y0IA80,P015DHDK0H1L510H0H15FDF,Q02AHA80W0JA,R0J740T017I74,R02AIAU02AIA0,R015DIDR015DDFD40,T0KAR0KA,T0K7540L0157J74,U0MAK02AKA80,T015DFDFDLDFDFDFDD,V02AUA8,W0U740,X02AQA0,X015DOD50,gG0MA80,gH0K50,,:::^XA\n" +
+                                "^MMT\n" +
+                                "^PW759\n" +
+                                "^LL0999\n" +
+                                "^LS0\n" +
+                                "^FT544,192^XG000.GRF,1,1^FS\n" +
+                                "^FO14,13^GB733,962,2^FS\n" +
+                                "^FO14,211^GB733,0,4^FS\n" +
+                                "^FO14,394^GB733,0,4^FS\n" +
+                                "^FO501,13^GB0,197,4^FS\n" +
+                                "^FT180,451^A0N,54,103^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD" + shipmentFrom_name + "^FS\n" +
+                                "^FT190,511^A0N,39,120^FH\\^A@N,0,42,E:TT0003M_.TTF^CI28^FD" + shipmentFrom_phone + "^FS\n" +
+                                "^FO14,596^GB733,0,4^FS\n" +
+                                "^FT221,777^A0N,34,146^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD" + shipmentTo_name + "^FS\n" +
+                                "^FT198,722^A0N,39,91^FH\\^A@N,0,42,E:TT0003M_.TTF^CI28^FD" + shipmentTo_phone + "^FS\n" +
+                                "^FO19,818^GB728,0,4^FS\n" +
+                                "^BY2,3,127^FT81,949^B3N,N,,Y,N\n" +
+                                "^FD" + shipCode + "^FS\n" +
+                                "^BY2,3,152^FT67,371^B3N,N,,Y,N\n" +
+                                "^FD" + shipCode + "^FS\n" +
+                                "^FT31,123^A0N,44,216^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD" + toStoreName + "^FS\n" +
+                                "^FT25,64^A0N,44,43^FH\\^FDContact Us^FS\n" +
+                                "^FT31,198^A0N,56,55^FH\\^FD" + toStorePhone + "^FS\n" +
+                                "^PQ" + (j + 1) + ",0,1,Y^XZ\n" +
+                                "^XA^ID000.GRF^FS^XZ\n").getBytes());
+                    }
+                });
             }
-
-
         } else {
             disconnect();
         }
@@ -434,7 +372,6 @@ public class MainActivity extends AppCompatActivity {
         ipAddressEditText.setText(discoveredPrinter.address);
     }
 
-
     void setupTscPrinter() {
         tscPrintBtn = findViewById(R.id.tsc_print);
         tscBackBtn = findViewById(R.id.tsc_back_btn);
@@ -443,19 +380,19 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void setupHoneywellPrinter() {
-        _buttonFindPrinter = (Button) findViewById(R.id.findPrinterId);
+        _buttonFindPrinter = findViewById(R.id.findPrinterId);
         FindPrinterButtonListener buttonListener = new FindPrinterButtonListener();
         _buttonFindPrinter.setOnClickListener(buttonListener);
 
-        _buttonSetPrinter = (Button) findViewById(R.id.setPrinterId);
+        _buttonSetPrinter = findViewById(R.id.setPrinterId);
         _buttonSetPrinter.setOnClickListener(new SetPrinterButtonListener());
 
 
-        _buttonPrintBarcode = (Button) findViewById(R.id.printBarcodeButton);
+        _buttonPrintBarcode = findViewById(R.id.printBarcodeButton);
         _buttonPrintBarcode.setOnClickListener(new PrintButtonListener());
 
 
-        _spinner = (Spinner) findViewById(R.id.spinner);
+        _spinner = findViewById(R.id.spinner);
 
         backBtn = findViewById(R.id.backBtn);
         backBtn.setOnClickListener(new View.OnClickListener() {
@@ -482,202 +419,6 @@ public class MainActivity extends AppCompatActivity {
         edit.apply();
     }
 
-    static final int MSG_PRINTING = 11115;
-    static final int MSG_PRINT_END = 11116;
-
-    static final int MSG_FINDING = 11111;
-    static final int MSG_FIND_END = 11112;
-    static final int MSG_LOCAL_IP = 11113;
-    //refresh UI
-    MyHandler _handler = new MyHandler(this);
-
-    public static class MyHandler extends Handler {
-        private WeakReference<MainActivity> reference;
-
-        MyHandler(MainActivity activity) {
-            reference = new WeakReference<MainActivity>(activity);
-        }
-
-        @Override
-        public void handleMessage(Message msg) {
-            try {
-                MainActivity activity = reference.get();
-
-                if (activity != null) {
-                    switch (msg.what) {
-                        case MSG_FINDING:
-                            activity._buttonFindPrinter.setText("جاري البحث ...");
-                            activity._buttonFindPrinter.setEnabled(false);
-                            activity._buttonPrintBarcode.setEnabled(false);
-//                            activity._buttonPrintQrCode.setEnabled(false);
-                            // init UI
-                            activity._curDevIp.setText("0.0.0.0");
-                            activity._spinner.setAdapter(null);
-                            break;
-                        case MSG_FIND_END:
-                            activity._buttonFindPrinter.setText("بحث");
-                            activity._buttonFindPrinter.setEnabled(true);
-                            activity._buttonPrintBarcode.setEnabled(true);
-//                            activity._buttonPrintQrCode.setEnabled(true);
-
-                            ArrayList<String> prtNameIpList = new ArrayList<String>();
-                            prtNameIpList.addAll(activity._mapPrinterIpName.keySet());
-                            ArrayAdapter<String> arr_adapter = new ArrayAdapter<String>(activity, android.R.layout.simple_spinner_item, prtNameIpList);
-                            arr_adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-                            activity._spinner.setAdapter(arr_adapter);
-                            break;
-                        case MSG_LOCAL_IP:
-                            String strIp = (String) msg.obj;
-                            activity._curDevIp.setText(strIp);
-                            break;
-                        case MSG_PRINTING:
-                            activity._buttonPrintBarcode.setEnabled(false);
-//                            activity._buttonPrintBarcode.setText("printting...");
-//                            activity._buttonPrintQrCode.setEnabled(false);
-//                            activity._buttonPrintQrCode.setText("printting...");
-//                            activity._buttonFindPrinter.setEnabled(false);
-                            activity._buttonFindPrinter.setText("جاري الطباعة");
-                            break;
-                        case MSG_PRINT_END:
-                            activity._buttonPrintBarcode.setEnabled(true);
-//                            activity._buttonPrintBarcode.setText("Print Bar");
-//                            activity._buttonPrintQrCode.setEnabled(true);
-//                            activity._buttonPrintQrCode.setText("Print QR");
-                            activity._buttonFindPrinter.setEnabled(true);
-                            activity._buttonFindPrinter.setText("بحث");
-                            break;
-                        default:
-                            // do something...
-                            break;
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-
-    //on push find printer button
-    class FindPrinterButtonListener implements View.OnClickListener {
-        boolean _bFinding = false;
-
-        @Override
-        public void onClick(View v) {
-            new Thread() {
-                @Override
-                public void run() {
-                    super.run();
-
-                    if (_bFinding) {
-                        return;
-                    }
-                    _bFinding = true;
-                    _handler.sendEmptyMessage(MSG_FINDING);
-                    _mapPrinterIpName.clear();   //remove printer name
-
-                    String strLocalIp = GetCurrentIp();
-
-                    Map<String, String> mapTemp = PrinterSdk.PRN_FindPrinters(strLocalIp, 60);
-                    if (null != mapTemp) {
-                        for (String str : mapTemp.keySet()) {
-                            _mapPrinterIpName.put(str + "(" + mapTemp.get(str) + ")", str);
-                        }
-                    }
-
-                    _bFinding = false;
-                    _handler.sendEmptyMessage(MSG_FIND_END);
-
-                    System.out.println("find over");
-                }
-            }.start();
-
-            System.out.println("find end");
-        }
-    }
-
-    //on push set printer button
-    class SetPrinterButtonListener implements View.OnClickListener {
-        boolean m_bRunning = false;
-
-        @Override
-        public void onClick(View v) {
-            if (m_bRunning) {
-                return;
-            }
-
-            m_bRunning = true;
-            v.setEnabled(false);
-
-            if (null == _spinner.getSelectedItem() || 0 == _spinner.getSelectedItem().toString().length())
-                return;
-
-            String strIp = _mapPrinterIpName.get(_spinner.getSelectedItem().toString());
-            if (null == strIp || 0 == strIp.length()) {
-                return;
-            }
-
-            sampleSetCfg(strIp);
-
-            m_bRunning = false;
-            v.setEnabled(true);
-        }
-    }
-
-
-    //on push print button
-    class PrintButtonListener implements View.OnClickListener {
-        boolean m_bRunning = false;
-
-        @Override
-        public void onClick(final View v) {
-            new Thread() {
-                @Override
-                public void run() {
-                    if (m_bRunning) {
-                        return;
-                    }
-                    m_bRunning = true;
-
-                    _handler.sendEmptyMessage(MSG_PRINTING);
-
-                    try {
-                        String strCurPrinterId = _spinner.getSelectedItem().toString();
-                        if (strCurPrinterId.isEmpty()) {
-                            return;
-                        }
-
-                        String curPrinterIp = _mapPrinterIpName.get(strCurPrinterId);
-                        if (null == curPrinterIp) {
-                            return;
-                        }
-
-
-                        if (v.getId() == R.id.printBarcodeButton) {
-
-                            for (int i = 0; i < qty.size(); i++) {
-                                int productQty = Integer.parseInt(qty.get(i));
-                                for (int j = 0; j < productQty; j++) {
-                                    SamplePrintText(shipCode, j + 1, productQty, _iBarcodeEnlarge, curPrinterIp, toStoreName, toStorePhone);
-                                }
-                            }
-                            finish();
-
-                        } else {
-                            //   SamplePrintQRcode(strEditText, _iQREnlarge, curPrinterIp);
-                        }
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                    }
-
-                    m_bRunning = false;
-                    _handler.sendEmptyMessage(MSG_PRINT_END);
-                }
-            }.start();
-        }
-    }
-
-
     // get device ip
     private String GetCurrentIp() {
         WifiManager wifiManager = (WifiManager) getApplicationContext().getSystemService(Context.WIFI_SERVICE);
@@ -696,7 +437,6 @@ public class MainActivity extends AppCompatActivity {
 
         return strIp;
     }
-
 
     //ip address int to str
     private String intToIp(int i) {
@@ -725,7 +465,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-
     //config printer
     void sampleSetCfg(String strIp) {
         PrinterSdk sdk = new PrinterSdk();
@@ -745,7 +484,6 @@ public class MainActivity extends AppCompatActivity {
             sdk.PRN_CloseConnect();
         }
     }
-
 
     /**
      * //sample of query printer model
@@ -772,7 +510,6 @@ public class MainActivity extends AppCompatActivity {
 
         return strOut[0];
     }
-
 
     /**
      * //sample of print text and barcode
@@ -919,85 +656,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-//    void SamplePrintText(String shipCode,int productIndexNumber,int size, int iBarcodeEnlarge, String strIp){
-//        PrinterSdk sdk = new PrinterSdk();
-//
-//        //connect printer
-//        if (0 != sdk.PRN_Connect(strIp)) {
-//            Log.e("printer", "error");
-//            return;
-//        }
-//        try {
-//            //add text to print
-//            String strFont = "Andale Mono";
-//            int iTextX = 20;
-//            int iTextY = 100;
-//
-//            //add barcode to print
-//            String strBarcodeType;
-//            strBarcodeType = "CODE93";
-//
-////            sdk.PRN_AddTextToLabelEx("ALSAIF-EXPRESS",  //text
-////                    strFont,        //font
-////                    16,   //text height
-////                    300,         //text coordinates x
-////                    250,         //text coordinates y
-////                    1,          //direction
-////                    1);
-//            sdk.PRN_AddBarcodeToLabelEx(shipCode,   //text
-//                    strBarcodeType,                                                 //barcode type
-//                    80,                                                 //bracode height
-//                    300,                           //coordinates x
-//                    250,                                                     //coordinates y
-//                    1,                                                          //direction
-//                    2,                                                        //the coordinates are the lower middle of the bar code
-//                    iBarcodeEnlarge,                                                //magnification
-//                    null);
-//                    //using default parameter.
-//
-//            sdk.PRN_AddTextToLabelEx(shipCode,  //text
-//                    strFont,        //font
-//                    20,   //text height
-//                    300,         //text coordinates x
-//                    170,         //text coordinates y
-//                    1,          //direction
-//                    1);         //position of coordinates
-//
-//
-//            //ProductData
-//
-//            sdk.PRN_AddBarcodeToLabelEx(shipCode,   //text
-//                    strBarcodeType,                                                 //barcode type
-//                    50,                                                 //bracode height
-//                    300,                           //coordinates x
-//                    80,                                                     //coordinates y
-//                    1,                                                          //direction
-//                    2,                                                        //the coordinates are the lower middle of the bar code
-//                    iBarcodeEnlarge,                                                //magnification
-//                    null);
-////            //using default parameter.
-////
-//            sdk.PRN_AddTextToLabelEx(productIndexNumber+" From "+size,  //text
-//                    strFont,        //font
-//                    16,   //text height
-//                    300,         //text coordinates x
-//                    30,         //text coordinates y
-//                    1,          //direction
-//                    1);         //position of coordinates
-//
-//            //print 1 copy
-//            sdk.PRN_PrintLabel(1);
-//
-//            sdk.PRN_ClearLabelBuffer();
-//        } catch (Exception e)
-//        {
-//            e.printStackTrace();
-//        }
-//        finally {
-//            sdk.PRN_CloseConnect();
-//        }
-//    }
-
     /**
      * sample of print text and QR code
      *
@@ -1083,6 +741,269 @@ public class MainActivity extends AppCompatActivity {
         sdk.PRN_CloseConnect();
 
         return iResult;
+    }
+
+    public static class MyHandler extends Handler {
+        private final WeakReference<MainActivity> reference;
+
+        MyHandler(MainActivity activity) {
+            reference = new WeakReference<MainActivity>(activity);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            try {
+                MainActivity activity = reference.get();
+
+                if (activity != null) {
+                    switch (msg.what) {
+                        case MSG_FINDING:
+                            activity._buttonFindPrinter.setText("جاري البحث ...");
+                            activity._buttonFindPrinter.setEnabled(false);
+                            activity._buttonPrintBarcode.setEnabled(false);
+//                            activity._buttonPrintQrCode.setEnabled(false);
+                            // init UI
+                            activity._curDevIp.setText("0.0.0.0");
+                            activity._spinner.setAdapter(null);
+                            break;
+                        case MSG_FIND_END:
+                            activity._buttonFindPrinter.setText("بحث");
+                            activity._buttonFindPrinter.setEnabled(true);
+                            activity._buttonPrintBarcode.setEnabled(true);
+//                            activity._buttonPrintQrCode.setEnabled(true);
+
+                            ArrayList<String> prtNameIpList = new ArrayList<String>();
+                            prtNameIpList.addAll(activity._mapPrinterIpName.keySet());
+                            ArrayAdapter<String> arr_adapter = new ArrayAdapter<String>(activity, android.R.layout.simple_spinner_item, prtNameIpList);
+                            arr_adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+                            activity._spinner.setAdapter(arr_adapter);
+                            break;
+                        case MSG_LOCAL_IP:
+                            String strIp = (String) msg.obj;
+                            activity._curDevIp.setText(strIp);
+                            break;
+                        case MSG_PRINTING:
+                            activity._buttonPrintBarcode.setEnabled(false);
+//                            activity._buttonPrintBarcode.setText("printting...");
+//                            activity._buttonPrintQrCode.setEnabled(false);
+//                            activity._buttonPrintQrCode.setText("printting...");
+//                            activity._buttonFindPrinter.setEnabled(false);
+                            activity._buttonFindPrinter.setText("جاري الطباعة");
+                            break;
+                        case MSG_PRINT_END:
+                            activity._buttonPrintBarcode.setEnabled(true);
+//                            activity._buttonPrintBarcode.setText("Print Bar");
+//                            activity._buttonPrintQrCode.setEnabled(true);
+//                            activity._buttonPrintQrCode.setText("Print QR");
+                            activity._buttonFindPrinter.setEnabled(true);
+                            activity._buttonFindPrinter.setText("بحث");
+                            break;
+                        default:
+                            // do something...
+                            break;
+                    }
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+//    void SamplePrintText(String shipCode,int productIndexNumber,int size, int iBarcodeEnlarge, String strIp){
+//        PrinterSdk sdk = new PrinterSdk();
+//
+//        //connect printer
+//        if (0 != sdk.PRN_Connect(strIp)) {
+//            Log.e("printer", "error");
+//            return;
+//        }
+//        try {
+//            //add text to print
+//            String strFont = "Andale Mono";
+//            int iTextX = 20;
+//            int iTextY = 100;
+//
+//            //add barcode to print
+//            String strBarcodeType;
+//            strBarcodeType = "CODE93";
+//
+////            sdk.PRN_AddTextToLabelEx("ALSAIF-EXPRESS",  //text
+////                    strFont,        //font
+////                    16,   //text height
+////                    300,         //text coordinates x
+////                    250,         //text coordinates y
+////                    1,          //direction
+////                    1);
+//            sdk.PRN_AddBarcodeToLabelEx(shipCode,   //text
+//                    strBarcodeType,                                                 //barcode type
+//                    80,                                                 //bracode height
+//                    300,                           //coordinates x
+//                    250,                                                     //coordinates y
+//                    1,                                                          //direction
+//                    2,                                                        //the coordinates are the lower middle of the bar code
+//                    iBarcodeEnlarge,                                                //magnification
+//                    null);
+//                    //using default parameter.
+//
+//            sdk.PRN_AddTextToLabelEx(shipCode,  //text
+//                    strFont,        //font
+//                    20,   //text height
+//                    300,         //text coordinates x
+//                    170,         //text coordinates y
+//                    1,          //direction
+//                    1);         //position of coordinates
+//
+//
+//            //ProductData
+//
+//            sdk.PRN_AddBarcodeToLabelEx(shipCode,   //text
+//                    strBarcodeType,                                                 //barcode type
+//                    50,                                                 //bracode height
+//                    300,                           //coordinates x
+//                    80,                                                     //coordinates y
+//                    1,                                                          //direction
+//                    2,                                                        //the coordinates are the lower middle of the bar code
+//                    iBarcodeEnlarge,                                                //magnification
+//                    null);
+////            //using default parameter.
+////
+//            sdk.PRN_AddTextToLabelEx(productIndexNumber+" From "+size,  //text
+//                    strFont,        //font
+//                    16,   //text height
+//                    300,         //text coordinates x
+//                    30,         //text coordinates y
+//                    1,          //direction
+//                    1);         //position of coordinates
+//
+//            //print 1 copy
+//            sdk.PRN_PrintLabel(1);
+//
+//            sdk.PRN_ClearLabelBuffer();
+//        } catch (Exception e)
+//        {
+//            e.printStackTrace();
+//        }
+//        finally {
+//            sdk.PRN_CloseConnect();
+//        }
+//    }
+
+    //on push find printer button
+    class FindPrinterButtonListener implements View.OnClickListener {
+        boolean _bFinding = false;
+
+        @Override
+        public void onClick(View v) {
+            new Thread() {
+                @Override
+                public void run() {
+                    super.run();
+
+                    if (_bFinding) {
+                        return;
+                    }
+                    _bFinding = true;
+                    _handler.sendEmptyMessage(MSG_FINDING);
+                    _mapPrinterIpName.clear();   //remove printer name
+
+                    String strLocalIp = GetCurrentIp();
+
+                    Map<String, String> mapTemp = PrinterSdk.PRN_FindPrinters(strLocalIp, 60);
+                    if (null != mapTemp) {
+                        for (String str : mapTemp.keySet()) {
+                            _mapPrinterIpName.put(str + "(" + mapTemp.get(str) + ")", str);
+                        }
+                    }
+
+                    _bFinding = false;
+                    _handler.sendEmptyMessage(MSG_FIND_END);
+
+                    System.out.println("find over");
+                }
+            }.start();
+
+            System.out.println("find end");
+        }
+    }
+
+    //on push set printer button
+    class SetPrinterButtonListener implements View.OnClickListener {
+        boolean m_bRunning = false;
+
+        @Override
+        public void onClick(View v) {
+            if (m_bRunning) {
+                return;
+            }
+
+            m_bRunning = true;
+            v.setEnabled(false);
+
+            if (null == _spinner.getSelectedItem() || 0 == _spinner.getSelectedItem().toString().length())
+                return;
+
+            String strIp = _mapPrinterIpName.get(_spinner.getSelectedItem().toString());
+            if (null == strIp || 0 == strIp.length()) {
+                return;
+            }
+
+            sampleSetCfg(strIp);
+
+            m_bRunning = false;
+            v.setEnabled(true);
+        }
+    }
+
+    //on push print button
+    class PrintButtonListener implements View.OnClickListener {
+        boolean m_bRunning = false;
+
+        @Override
+        public void onClick(final View v) {
+            new Thread() {
+                @Override
+                public void run() {
+                    if (m_bRunning) {
+                        return;
+                    }
+                    m_bRunning = true;
+
+                    _handler.sendEmptyMessage(MSG_PRINTING);
+
+                    try {
+                        String strCurPrinterId = _spinner.getSelectedItem().toString();
+                        if (strCurPrinterId.isEmpty()) {
+                            return;
+                        }
+
+                        String curPrinterIp = _mapPrinterIpName.get(strCurPrinterId);
+                        if (null == curPrinterIp) {
+                            return;
+                        }
+
+
+                        if (v.getId() == R.id.printBarcodeButton) {
+
+                            for (int i = 0; i < qty.size(); i++) {
+                                int productQty = Integer.parseInt(qty.get(i));
+                                for (int j = 0; j < productQty; j++) {
+                                    SamplePrintText(shipCode, j + 1, productQty, _iBarcodeEnlarge, curPrinterIp, toStoreName, toStorePhone);
+                                }
+                            }
+                            finish();
+
+                        } else {
+                            //   SamplePrintQRcode(strEditText, _iQREnlarge, curPrinterIp);
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
+                    }
+
+                    m_bRunning = false;
+                    _handler.sendEmptyMessage(MSG_PRINT_END);
+                }
+            }.start();
+        }
     }
 
 }

@@ -18,6 +18,7 @@
         android:gravity="center_horizontal"
         android:text="قم بتحديد نوع الطابعة"
         android:textAlignment="center"
+        android:textColor="@color/black"
         android:textSize="30sp" />
 
 
@@ -28,38 +29,37 @@
         android:orientation="vertical">
 
         <RadioButton
-            android:id="@+id/tsc_radio_id"
+            android:id="@+id/zebra_radio_id"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:checked="true"
-            android:text="TSC Printer" />
+            android:text="Zebra Printer"
+            android:textSize="16dp"
+            android:textStyle="italic" />
+
+        <RadioButton
+            android:id="@+id/tsc_radio_id"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TSC Printer"
+            android:textSize="16dp"
+            android:textStyle="italic" />
 
         <RadioButton
             android:id="@+id/honey_radio_id"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Honeywell Printer" />
-
-        <RadioButton
-            android:id="@+id/zebra_radio_id"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="Zebra Printer" />
+            android:text="Honeywell Printer"
+            android:textSize="16dp"
+            android:textStyle="italic" />
 
 
     </RadioGroup>
 
-    <!--    <Button-->
-    <!--        android:id="@+id/btn_zebra"-->
-    <!--        android:layout_width="wrap_content"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:text="Zebra Printer" />-->
 
-    <!--    <Button-->
-    <!--        android:id="@+id/btn_test"-->
-    <!--        android:layout_width="wrap_content"-->
-    <!--        android:layout_height="wrap_content"-->
-    <!--        android:text="Zebra Printer" />-->
+    <include
+        android:id="@+id/zebra_include"
+        layout="@layout/activity_zebra" />
 
     <include
         android:id="@+id/tsc_include"
@@ -68,10 +68,6 @@
     <include
         android:id="@+id/honey_include"
         layout="@layout/honey_layout" />
-
-    <include
-        android:id="@+id/zebra_include"
-        layout="@layout/activity_zebra" />
 
 
 </LinearLayout>

@@ -1,10 +1,6 @@
 <resources>
     <string name="app_name">StickerPrinter</string>
 
-    <string name="disconnect_printer">Disconnect Printer</string>
-    <string name="discover_printers">Discover Printers</string>
-    <string name="settings">Settings</string>
-
     <string name="searching_for_printers">Searching for printers&#8230;</string>
     <string name="discovered_printers">Discovered printers</string>
 </resources>
