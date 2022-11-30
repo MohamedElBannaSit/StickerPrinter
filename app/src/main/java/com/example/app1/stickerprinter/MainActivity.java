@@ -1,7 +1,6 @@
 package com.example.app1.stickerprinter;
 
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.net.wifi.WifiInfo;
@@ -150,21 +149,21 @@ public class MainActivity extends AppCompatActivity {
         });
 
 
-        Intent i = getIntent();
-        shipDataBundle = i.getBundleExtra("ship_data");
+        shipDataBundle = getIntent().getBundleExtra("ship_data");
 
         if (shipDataBundle != null) {
 
 
-            qty = shipDataBundle.getStringArrayList("qty");
-            shipCode = shipDataBundle.getString("ship_code");
-            toStoreName = shipDataBundle.getString("store_name");
-            toStorePhone = shipDataBundle.getString("store_phone");
             shipmentFrom_name = shipDataBundle.getString("from_name");
             shipmentFrom_phone = shipDataBundle.getString("from_phone");
             shipmentTo_name = shipDataBundle.getString("to_name");
             shipmentTo_phone = shipDataBundle.getString("to_phone");
+            shipCode = shipDataBundle.getString("ship_code");
             shipmentTotal = shipDataBundle.getString("total");
+            toStoreName = shipDataBundle.getString("store_name");
+            toStorePhone = shipDataBundle.getString("store_phone");
+            qty = shipDataBundle.getStringArrayList("qty");
+
 
             Log.e("Bundle", bundleToString(shipDataBundle));
         }
@@ -330,8 +329,8 @@ public class MainActivity extends AppCompatActivity {
         printer = connect();
         if (printer != null) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-                shipDataBundle.getIntegerArrayList("qty").forEach(s -> {
-                    int productQty = s;
+                qty.forEach(s -> {
+                    int productQty = Integer.parseInt(s);
                     for (int j = 0; j < productQty; j++) {
                         sendTestLabel(("^XA~TA000~JSN^LT0^MNW^MTT^PON^PMN^LH0,0^JMA^PR5,5~SD15^JUS^LRN^CI0^XZ\n" +
                                 "~DG000.GRF,05376,028,\n" +
@@ -358,7 +357,7 @@ public class MainActivity extends AppCompatActivity {
                                 "^FT31,123^A0N,44,216^FH\\^A@N,0,50,E:TT0003M_.TTF^CI28^FD" + toStoreName + "^FS\n" +
                                 "^FT25,64^A0N,44,43^FH\\^FDContact Us^FS\n" +
                                 "^FT31,198^A0N,56,55^FH\\^FD" + toStorePhone + "^FS\n" +
-                                "^PQ" + (j + 1) + ",0,1,Y^XZ\n" +
+                                "^PQ" + productQty + ",0,1,Y^XZ\n" +
                                 "^XA^ID000.GRF^FS^XZ\n").getBytes());
                     }
                 });
